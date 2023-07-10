@@ -26,6 +26,7 @@
       "email": "${GF_ADMIN_USERNAME}@admin.com",
       "username": "${GF_ADMIN_USERNAME}",
       "enabled": true,
+      "emailVerified": true,
       "credentials": [
         {
           "temporary": false,
