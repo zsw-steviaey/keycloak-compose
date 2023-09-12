@@ -3,6 +3,13 @@
   "realm": "${KC_REALM_NAME}",
   "sslRequired": "none",
   "enabled": true,
+  "eventsEnabled": true,
+  "eventsExpiration": 900,
+  "adminEventsEnabled": true,
+  "adminEventsDetailsEnabled": true,
+  "attributes": {
+    "adminEventsExpiration": "900"
+  },
   "clients": [
     {
       "id": "grafana",
@@ -24,8 +31,10 @@
   "users": [
     {
       "id": "admin",
-      "email": "${GF_ADMIN_USERNAME}@admin.com",
+      "email": "${GF_ADMIN_USERNAME}@admin",
       "username": "${GF_ADMIN_USERNAME}",
+      "firstName": "DevOps",
+      "lastName": "SRE",
       "enabled": true,
       "emailVerified": true,
       "credentials": [

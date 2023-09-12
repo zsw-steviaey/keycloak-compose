@@ -6,9 +6,7 @@ x-logging: &logging
 
 services:
   postgres:
-    build:
-      context: ./docker
-      dockerfile: postgres.Dockerfile
+    image: postgres:${POSTGRES_VERSION}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "keycloak"]
@@ -21,17 +19,10 @@ services:
         target: /var/lib/postgresql/data
         tmpfs:
           size: 100000000
-    deploy:
-      resources:
-        limits:
-          memory: 250M
-          cpus: '0.25'
     logging: *logging
 
   keycloak:
-    build:
-      context: ./docker
-      dockerfile: keycloak.Dockerfile
+    image: quay.io/keycloak/keycloak:${KC_VERSION}
     command: ["start-dev", "--import-realm"]
     restart: unless-stopped
     environment:
@@ -40,6 +31,7 @@ services:
       KC_DB_PASSWORD: password
       KC_DB_URL: "jdbc:postgresql://postgres:5432/keycloak"
       KC_METRICS_ENABLED: true
+      KC_LOG_LEVEL: ${KC_LOG_LEVEL}
       KC_REALM_NAME: ${KC_REALM_NAME}
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
@@ -50,17 +42,10 @@ services:
       - ${KC_PORT}:8080
     volumes:
       - ./keycloak/realm.json:/opt/keycloak/data/import/realm.json:ro
-    deploy:
-      resources:
-        limits:
-          memory: 500M
-          cpus: '1'
     logging: *logging
 
   prometheus:
-    build:
-      context: ./docker
-      dockerfile: prometheus.Dockerfile
+    image: prom/prometheus:${PROMETHEUS_VERSION}
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
@@ -74,23 +59,18 @@ services:
       - ${PROMETHEUS_PORT}:9090
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-    deploy:
-      resources:
-        limits:
-          memory: 250M
-          cpus: '0.25'
     logging: *logging
 
   grafana:
-    build:
-      context: ./docker
-      dockerfile: grafana.Dockerfile
+    image: grafana/grafana-oss:${GF_VERSION}
     restart: unless-stopped
-    network_mode: host
+    ports:
+      - ${GF_SERVER_HTTP_PORT}:${GF_SERVER_HTTP_PORT}
     healthcheck:
-      test: ["CMD", "wget", "--spider", "http://localhost:${GF_SERVER_HTTP_PORT}/healthz"]
+      test: ["CMD", "wget", "--spider", "http://localhost:${GF_SERVER_HTTP_PORT}/api/health"]
     environment:
       GF_SERVER_HTTP_PORT: ${GF_SERVER_HTTP_PORT}
+      GF_LOG_LEVEL: ${GF_LOG_LEVEL}
       GF_AUTH_BASIC_ENABLED: true
       GF_AUTH_DISABLE_LOGIN_FORM: true
       GF_AUTH_GENERIC_OAUTH_TLS_SKIP_VERIFY_INSECURE: true
@@ -101,14 +81,9 @@ services:
       GF_AUTH_GENERIC_OAUTH_EMAIL_ATTRIBUTE_NAME: "email:primary"
       GF_AUTH_GENERIC_OAUTH_SCOPES: "openid profile email"
       GF_AUTH_GENERIC_OAUTH_AUTH_URL: ${KC_HOSTNAME}:${KC_PORT}/realms/${KC_REALM_NAME}/protocol/openid-connect/auth
-      GF_AUTH_GENERIC_OAUTH_TOKEN_URL: ${KC_HOSTNAME}:${KC_PORT}/realms/${KC_REALM_NAME}/protocol/openid-connect/token
+      GF_AUTH_GENERIC_OAUTH_TOKEN_URL: http://keycloak:${KC_PORT}/realms/${KC_REALM_NAME}/protocol/openid-connect/token
       GF_AUTH_GENERIC_OAUTH_API_URL: ${KC_HOSTNAME}:${KC_PORT}/realms/${KC_REALM_NAME}/protocol/openid-connect/userinfo
     volumes:
       - ./grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
       - ./grafana/datasources:/etc/grafana/provisioning/datasources:ro
-    deploy:
-      resources:
-        limits:
-          memory: 250M
-          cpus: '0.25'
     logging: *logging
